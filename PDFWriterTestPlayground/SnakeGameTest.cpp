@@ -32,6 +32,7 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <cstring>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -113,11 +114,15 @@ void SnakeGame::moveSnake() {
 }
 
 void SnakeGame::drawGame() {
+    // Only clear screen in interactive mode
+    const char* interactive = getenv("SNAKE_INTERACTIVE");
+    if (interactive && strcmp(interactive, "1") == 0) {
 #ifdef _WIN32
-    system("cls");
+        system("cls");
 #else
-    system("clear");
+        system("clear");
 #endif
+    }
     
     cout << "=== SNAKE GAME ===" << endl;
     cout << "Score: " << score << " | Length: " << snake.size() << endl;
@@ -179,7 +184,13 @@ char SnakeGame::getInput() {
     return 0;
 }
 
-void SnakeGame::run() {
+void SnakeGame::step() {
+    if (!gameOver) {
+        moveSnake();
+    }
+}
+
+void SnakeGame::runInteractive() {
     cout << "Benvenuto al gioco Snake!" << endl;
     cout << "Premi INVIO per iniziare..." << endl;
     cin.get();
@@ -207,7 +218,7 @@ void SnakeGame::run() {
                 break;
         }
         
-        moveSnake();
+        step();
         this_thread::sleep_for(chrono::milliseconds(200));
     }
     
@@ -217,6 +228,54 @@ void SnakeGame::run() {
     cout << "Lunghezza finale: " << snake.size() << endl;
     cout << "Tempo di gioco: " << fixed << setprecision(1) << getGameDuration() << " secondi" << endl;
     cout << endl << "Generazione del report PDF..." << endl;
+}
+
+void SnakeGame::runSimulation(int steps) {
+    cout << "Esecuzione simulazione Snake (" << steps << " passi)..." << endl;
+    
+    // Deterministic simulation with seeded random
+    srand(42); // Fixed seed for reproducible results
+    
+    // Simple AI: try to move towards food
+    for (int i = 0; i < steps && !gameOver; i++) {
+        // Simple AI logic: move towards food
+        Position head = snake[0];
+        Direction newDirection = currentDirection;
+        
+        // Try to move towards food
+        if (food.x > head.x && currentDirection != LEFT) {
+            newDirection = RIGHT;
+        } else if (food.x < head.x && currentDirection != RIGHT) {
+            newDirection = LEFT;
+        } else if (food.y > head.y && currentDirection != UP) {
+            newDirection = DOWN;
+        } else if (food.y < head.y && currentDirection != DOWN) {
+            newDirection = UP;
+        }
+        
+        currentDirection = newDirection;
+        step();
+        
+        // Occasionally change direction to make it more interesting
+        if (i % 10 == 0 && rand() % 4 == 0) {
+            Direction directions[] = {UP, DOWN, LEFT, RIGHT};
+            Direction randomDir = directions[rand() % 4];
+            // Only change if it won't immediately reverse
+            if ((randomDir == UP && currentDirection != DOWN) ||
+                (randomDir == DOWN && currentDirection != UP) ||
+                (randomDir == LEFT && currentDirection != RIGHT) ||
+                (randomDir == RIGHT && currentDirection != LEFT)) {
+                currentDirection = randomDir;
+            }
+        }
+    }
+    
+    endTime = chrono::steady_clock::now();
+    
+    cout << "Simulazione completata!" << endl;
+    cout << "Punteggio finale: " << score << endl;
+    cout << "Lunghezza finale: " << snake.size() << endl;
+    cout << "Passi eseguiti: " << (gameOver ? "Gioco terminato prima" : to_string(steps)) << endl;
 }
 
 double SnakeGame::getGameDuration() const {
@@ -237,7 +296,16 @@ EStatusCode SnakeGameTest::Run(const TestConfiguration& inTestConfiguration) {
     cout << endl;
     
     SnakeGame game;
-    game.run();
+    
+    // Check if interactive mode is requested
+    const char* interactive = getenv("SNAKE_INTERACTIVE");
+    if (interactive && strcmp(interactive, "1") == 0) {
+        cout << "Modalità interattiva abilitata (SNAKE_INTERACTIVE=1)" << endl;
+        game.runInteractive();
+    } else {
+        cout << "Modalità simulazione (usa SNAKE_INTERACTIVE=1 per modalità interattiva)" << endl;
+        game.runSimulation(150); // Run simulation for 150 steps
+    }
     
     return generateGameReportPDF(inTestConfiguration, game);
 }
@@ -264,17 +332,33 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
             break;
         }
         
+        // Try to get a font - use built-in font if available
+        PDFUsedFont* titleFont = nullptr;
+        PDFUsedFont* textFont = nullptr;
+        
+        // Try to use built-in fonts first, fallback to basic text if not available
+        try {
+            titleFont = pdfWriter.GetFontForFile("Helvetica-Bold");
+            textFont = pdfWriter.GetFontForFile("Helvetica");
+        } catch (...) {
+            // If fonts fail, we'll use basic text rendering
+        }
+        
         // Title
         contentContext->BT();
         contentContext->k(0, 0, 0, 100); // Black
-        contentContext->Tf(pdfWriter.GetFontForFile("Helvetica"), 24);
+        if (titleFont) {
+            contentContext->Tf(titleFont, 24);
+        }
         contentContext->Td(50, 750);
         contentContext->Tj("SNAKE GAME - REPORT DI GIOCO");
         contentContext->ET();
         
         // Game statistics
         contentContext->BT();
-        contentContext->Tf(pdfWriter.GetFontForFile("Helvetica"), 14);
+        if (textFont) {
+            contentContext->Tf(textFont, 14);
+        }
         contentContext->Td(50, 700);
         
         stringstream stats;
@@ -298,13 +382,17 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         
         // Performance evaluation
         contentContext->BT();
-        contentContext->Tf(pdfWriter.GetFontForFile("Helvetica"), 16);
+        if (textFont) {
+            contentContext->Tf(textFont, 16);
+        }
         contentContext->Td(50, 620);
         contentContext->Tj("VALUTAZIONE PERFORMANCE:");
         contentContext->ET();
         
         contentContext->BT();
-        contentContext->Tf(pdfWriter.GetFontForFile("Helvetica"), 12);
+        if (textFont) {
+            contentContext->Tf(textFont, 12);
+        }
         contentContext->Td(50, 590);
         
         string performance;
@@ -327,7 +415,7 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         contentContext->w(5);
         
         // Snake body
-        for (int i = 0; i < min(10, game.getSnakeLength()); i++) {
+        for (int i = 0; i < std::min(10, game.getSnakeLength()); i++) {
             contentContext->re(100 + i * 15, 400, 10, 10);
             contentContext->f();
         }
@@ -341,7 +429,9 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         // Footer
         contentContext->BT();
         contentContext->k(0, 0, 0, 50); // Gray
-        contentContext->Tf(pdfWriter.GetFontForFile("Helvetica"), 10);
+        if (textFont) {
+            contentContext->Tf(textFont, 10);
+        }
         contentContext->Td(50, 50);
         contentContext->Tj("Generato da PDF-Writer Snake Game Test");
         contentContext->ET();

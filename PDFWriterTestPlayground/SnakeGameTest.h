@@ -23,6 +23,7 @@
 #include <vector>
 #include <utility>
 #include <chrono>
+#include <algorithm>
 
 struct Position {
     int x, y;
@@ -58,10 +59,13 @@ private:
     
 public:
     SnakeGame();
-    void run();
+    void runInteractive();
+    void runSimulation(int steps = 100);
     int getScore() const { return score; }
     double getGameDuration() const;
     int getSnakeLength() const { return static_cast<int>(snake.size()); }
+    bool isGameOver() const { return gameOver; }
+    void step(); // Single game step for simulation
 };
 
 class SnakeGameTest : public ITestUnit

@@ -6,14 +6,24 @@ Questo è un gioco Snake implementato come test per la libreria PDF-Writer. Il g
 
 ## Caratteristiche
 
-- **Gioco Snake completo**: Controlla il serpente, raccogli il cibo, evita le collisioni
-- **Controlli intuitivi**: Usa W/A/S/D per muoverti, Q per uscire
-- **Generazione PDF automatica**: Al termine del gioco viene generato un report PDF con le statistiche
+- **Due modalità di esecuzione**:
+  - **Modalità Test**: Simulazione automatica deterministica per CI/testing
+  - **Modalità Interattiva**: Gioco Snake completo controllabile dall'utente
+- **Controlli intuitivi**: Usa W/A/S/D per muoverti, Q per uscire (modalità interattiva)
+- **Generazione PDF automatica**: Al termine viene generato un report PDF con le statistiche
 - **Multipiattaforma**: Funziona su Windows, Linux e macOS
+- **Compatibile con CI**: Non blocca l'esecuzione automatica dei test
 
-## Come Giocare
+## Come Usare
 
+### Modalità Test (Default)
 1. Compila il progetto PDF-Writer con il nuovo test incluso
+2. Esegui il test playground: `./PDFWriterTestPlayground`
+3. Seleziona il test "SnakeGameTest" dalla categoria "Games"
+4. Il test eseguirà automaticamente una simulazione deterministica e genererà il PDF
+
+### Modalità Interattiva
+1. Imposta la variabile d'ambiente: `export SNAKE_INTERACTIVE=1`
 2. Esegui il test playground: `./PDFWriterTestPlayground`
 3. Seleziona il test "SnakeGameTest" dalla categoria "Games"
 4. Usa i controlli:
@@ -49,10 +59,12 @@ Al termine di ogni partita, il gioco genera automaticamente un file PDF chiamato
 ## Implementazione Tecnica
 
 Il gioco è implementato in C++ e utilizza:
-- Logica di gioco in tempo reale con input non bloccante
-- Rendering console cross-platform
+- **Modalità Test**: Simulazione deterministica con AI semplice (seed fisso per riproducibilità)
+- **Modalità Interattiva**: Logica di gioco in tempo reale con input non bloccante
+- Rendering console cross-platform (solo in modalità interattiva)
 - Integrazione completa con la libreria PDF-Writer per la generazione di report
 - Gestione del tempo per statistiche accurate
+- Gestione robusta dei font (fallback se i font non sono disponibili)
 
 ## File Coinvolti
 
