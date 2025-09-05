@@ -440,7 +440,7 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         } else {
             // Fallback: draw statistics as colored bars if no font
             contentContext->q();
-            contentContext->k(0, 100, 0, 0); // Green for score
+            contentContext->k(100, 0, 100, 0); // Green for score
             int scoreWidth = std::min(300, game.getScore() * 3);
             contentContext->re(50, 700, scoreWidth, 10);
             contentContext->f();
@@ -480,7 +480,7 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         
         // Draw a simple snake representation
         contentContext->q();
-        contentContext->k(0, 100, 0, 0); // Green
+        contentContext->k(100, 0, 100, 0); // Green
         
         // Snake body
         for (int i = 0; i < std::min(10, game.getSnakeLength()); i++) {
@@ -489,7 +489,7 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         }
         
         // Food
-        contentContext->k(100, 0, 0, 0); // Red
+        contentContext->k(0, 100, 100, 0); // Red
         contentContext->re(300, 400, 10, 10);
         contentContext->f();
         contentContext->Q();
