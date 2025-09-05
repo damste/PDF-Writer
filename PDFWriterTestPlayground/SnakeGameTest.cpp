@@ -74,6 +74,7 @@ SnakeGame::SnakeGame(bool seedRandom) : currentDirection(RIGHT), score(0), gameO
     }
     generateFood();
     startTime = time(NULL);
+    endTime = 0; // Initialize to 0 for guard in getGameDuration()
 }
 
 void SnakeGame::setSeed(unsigned int seed) {
