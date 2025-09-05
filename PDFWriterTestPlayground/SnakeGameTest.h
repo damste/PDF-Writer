@@ -21,8 +21,6 @@
 #pragma once
 #include "ITestUnit.h"
 #include <vector>
-#include <utility>
-#include <algorithm>
 #include <ctime>
 
 struct Position {

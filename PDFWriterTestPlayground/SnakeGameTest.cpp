@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <cstring>
 #include <algorithm>
+#include <string>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -328,6 +329,10 @@ double SnakeGame::getGameDuration() const {
         return totalSteps * 0.2;
     } else {
         // For interactive: use actual time
+        if (endTime == 0) {
+            // Game still running or endTime not set
+            return difftime(time(NULL), startTime);
+        }
         return difftime(endTime, startTime);
     }
 }
