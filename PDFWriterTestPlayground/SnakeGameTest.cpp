@@ -388,15 +388,16 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         titleFont = textFont; // Use same font for title, just different size
         
         // Title
-        contentContext->BT();
-        contentContext->k(0, 0, 0, 100); // Black
         if (titleFont) {
+            contentContext->BT();
+            contentContext->k(0, 0, 0, 100); // Black
             contentContext->Tf(titleFont, 1);
             contentContext->Tm(24, 0, 0, 24, 50, 750);
             EStatusCode titleStatus = contentContext->Tj("SNAKE GAME - REPORT DI GIOCO");
             if (titleStatus != eSuccess) {
                 cout << "Warning: Could not render title text" << endl;
             }
+            contentContext->ET();
         } else {
             // Fallback: draw title as a rectangle if no font available
             contentContext->q();
@@ -405,7 +406,6 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
             contentContext->f();
             contentContext->Q();
         }
-        contentContext->ET();
         
         // Game statistics
         if (textFont) {
@@ -445,7 +445,7 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
             contentContext->re(50, 700, scoreWidth, 10);
             contentContext->f();
             
-            contentContext->k(0, 0, 100, 0); // Blue for length
+            contentContext->k(100, 100, 0, 0); // Blue for length
             int lengthWidth = std::min(300, game.getSnakeLength() * 10);
             contentContext->re(50, 680, lengthWidth, 10);
             contentContext->f();
