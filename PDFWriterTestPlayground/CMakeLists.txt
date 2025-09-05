@@ -56,6 +56,7 @@ RefCountTest.cpp
 ShutDownRestartTest.cpp
 SimpleContentPageTest.cpp
 SimpleTextUsage.cpp
+SnakeGameTest.cpp
 TestMeasurementsTest.cpp
 TestsRunner.cpp
 HighLevelImages.cpp
@@ -125,6 +126,7 @@ RefCountTest.h
 ShutDownRestartTest.h
 SimpleContentPageTest.h
 SimpleTextUsage.h
+SnakeGameTest.h
 TestMeasurementsTest.h
 TestsRunner.h
 HighLevelImages.h
@@ -333,6 +335,11 @@ PFBStreamTest.cpp
 PFBStreamTest.h
 Type1Test.cpp
 Type1Test.h
+)
+
+source_group(Tests\\Games FILES
+SnakeGameTest.cpp
+SnakeGameTest.h
 )
 
 if(PDFHUMMUS_NO_DCT)

@@ -1,0 +1,78 @@
+/*
+   Source File : SnakeGameTest.h
+
+
+   Copyright 2024 PDF-Writer Snake Game
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   
+*/
+#pragma once
+#include "ITestUnit.h"
+#include <vector>
+#include <utility>
+#include <chrono>
+
+struct Position {
+    int x, y;
+    Position(int x = 0, int y = 0) : x(x), y(y) {}
+    bool operator==(const Position& other) const {
+        return x == other.x && y == other.y;
+    }
+};
+
+enum Direction {
+    UP, DOWN, LEFT, RIGHT
+};
+
+class SnakeGame {
+private:
+    static const int GRID_WIDTH = 20;
+    static const int GRID_HEIGHT = 15;
+    
+    std::vector<Position> snake;
+    Position food;
+    Direction currentDirection;
+    int score;
+    bool gameOver;
+    std::chrono::steady_clock::time_point startTime;
+    std::chrono::steady_clock::time_point endTime;
+    
+    void generateFood();
+    bool isValidPosition(const Position& pos);
+    bool checkCollision(const Position& pos);
+    void moveSnake();
+    void drawGame();
+    char getInput();
+    
+public:
+    SnakeGame();
+    void run();
+    int getScore() const { return score; }
+    double getGameDuration() const;
+    int getSnakeLength() const { return static_cast<int>(snake.size()); }
+};
+
+class SnakeGameTest : public ITestUnit
+{
+public:
+    SnakeGameTest(void);
+    ~SnakeGameTest(void);
+
+    virtual PDFHummus::EStatusCode Run(const TestConfiguration& inTestConfiguration);
+    
+private:
+    PDFHummus::EStatusCode generateGameReportPDF(const TestConfiguration& inTestConfiguration, 
+                                                const SnakeGame& game);
+};
