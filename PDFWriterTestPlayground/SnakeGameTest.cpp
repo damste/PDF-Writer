@@ -33,6 +33,9 @@
 #include <cstring>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <conio.h>
 #include <windows.h>
 #else
@@ -54,7 +57,7 @@ void sleepMs(int milliseconds) {
 }
 
 // SnakeGame Implementation
-SnakeGame::SnakeGame(bool seedRandom) : currentDirection(RIGHT), score(0), gameOver(false), totalSteps(0) {
+SnakeGame::SnakeGame(bool seedRandom) : currentDirection(RIGHT), score(0), gameOver(false), isSimulation(false), totalSteps(0) {
     // Initialize snake in the center
     snake.push_back(Position(GRID_WIDTH/2, GRID_HEIGHT/2));
     snake.push_back(Position(GRID_WIDTH/2-1, GRID_HEIGHT/2));
@@ -202,11 +205,14 @@ char SnakeGame::getInput() {
 void SnakeGame::step() {
     if (!gameOver) {
         moveSnake();
-        totalSteps++;
+        if (isSimulation) {
+            totalSteps++;
+        }
     }
 }
 
 void SnakeGame::runInteractive() {
+    isSimulation = false; // This is interactive mode
     cout << "Benvenuto al gioco Snake!" << endl;
     cout << "Premi INVIO per iniziare..." << endl;
     cin.get();
@@ -247,6 +253,7 @@ void SnakeGame::runInteractive() {
 }
 
 void SnakeGame::runSimulation(int steps) {
+    isSimulation = true; // This is simulation mode
     cout << "Esecuzione simulazione Snake (" << steps << " passi)..." << endl;
     
     // Simple AI: try to move towards food
@@ -298,7 +305,7 @@ void SnakeGame::runSimulation(int steps) {
 }
 
 double SnakeGame::getGameDuration() const {
-    if (totalSteps > 0) {
+    if (isSimulation) {
         // For simulation: assume 200ms per step
         return totalSteps * 0.2;
     } else {

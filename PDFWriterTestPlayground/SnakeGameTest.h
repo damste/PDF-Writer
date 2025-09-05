@@ -47,6 +47,7 @@ private:
     Direction currentDirection;
     int score;
     bool gameOver;
+    bool isSimulation; // Track if this is a simulation or interactive game
     time_t startTime;
     time_t endTime;
     int totalSteps; // For simulation duration calculation
