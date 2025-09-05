@@ -49,7 +49,7 @@ using namespace std;
 using namespace PDFHummus;
 
 // Cross-platform sleep function
-void sleepMs(int milliseconds) {
+static void sleepMs(int milliseconds) {
 #ifdef _WIN32
     Sleep(milliseconds);
 #else
@@ -147,9 +147,8 @@ void SnakeGame::moveSnake() {
 }
 
 void SnakeGame::drawGame() {
-    // Only clear screen in interactive mode
-    const char* interactive = getenv("SNAKE_INTERACTIVE");
-    if (interactive && strcmp(interactive, "1") == 0) {
+    // Only clear screen in interactive mode (not simulation)
+    if (!isSimulation) {
 #ifdef _WIN32
         system("cls");
 #else
