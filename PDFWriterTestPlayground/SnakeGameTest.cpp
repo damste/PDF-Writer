@@ -31,6 +31,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cstring>
+#include <algorithm>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -113,17 +114,31 @@ void SnakeGame::moveSnake() {
         return;
     }
     
-    // Check self collision
-    if (checkCollision(newHead)) {
-        gameOver = true;
-        endTime = time(NULL);
-        return;
+    // Check if food eaten
+    bool ateFood = (newHead == food);
+    
+    // Check self collision (excluding tail if not eating food)
+    if (ateFood) {
+        // If eating food, check collision with entire body
+        if (checkCollision(newHead)) {
+            gameOver = true;
+            endTime = time(NULL);
+            return;
+        }
+    } else {
+        // If not eating food, check collision excluding the tail (which will be removed)
+        for (size_t i = 0; i < snake.size() - 1; ++i) {
+            if (snake[i] == newHead) {
+                gameOver = true;
+                endTime = time(NULL);
+                return;
+            }
+        }
     }
     
     snake.insert(snake.begin(), newHead);
     
-    // Check if food eaten
-    if (newHead == food) {
+    if (ateFood) {
         score += 10;
         generateFood();
     } else {
@@ -465,7 +480,6 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         // Draw a simple snake representation
         contentContext->q();
         contentContext->k(0, 100, 0, 0); // Green
-        contentContext->w(5);
         
         // Snake body
         for (int i = 0; i < std::min(10, game.getSnakeLength()); i++) {
