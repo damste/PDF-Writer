@@ -28,8 +28,6 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
-#include <thread>
-#include <chrono>
 #include <sstream>
 #include <iomanip>
 #include <cstring>
@@ -46,16 +44,33 @@
 using namespace std;
 using namespace PDFHummus;
 
+// Cross-platform sleep function
+void sleepMs(int milliseconds) {
+#ifdef _WIN32
+    Sleep(milliseconds);
+#else
+    usleep(milliseconds * 1000);
+#endif
+}
+
 // SnakeGame Implementation
-SnakeGame::SnakeGame() : currentDirection(RIGHT), score(0), gameOver(false) {
+SnakeGame::SnakeGame(bool seedRandom) : currentDirection(RIGHT), score(0), gameOver(false), totalSteps(0) {
     // Initialize snake in the center
     snake.push_back(Position(GRID_WIDTH/2, GRID_HEIGHT/2));
     snake.push_back(Position(GRID_WIDTH/2-1, GRID_HEIGHT/2));
     snake.push_back(Position(GRID_WIDTH/2-2, GRID_HEIGHT/2));
     
-    srand(static_cast<unsigned int>(time(nullptr)));
+    if (seedRandom) {
+        srand(static_cast<unsigned int>(time(NULL)));
+    }
     generateFood();
-    startTime = chrono::steady_clock::now();
+    startTime = time(NULL);
+}
+
+void SnakeGame::setSeed(unsigned int seed) {
+    srand(seed);
+    // Regenerate food with new seed
+    generateFood();
 }
 
 void SnakeGame::generateFood() {
@@ -70,8 +85,8 @@ bool SnakeGame::isValidPosition(const Position& pos) {
 }
 
 bool SnakeGame::checkCollision(const Position& pos) {
-    for (const auto& segment : snake) {
-        if (segment == pos) {
+    for (size_t i = 0; i < snake.size(); ++i) {
+        if (snake[i] == pos) {
             return true;
         }
     }
@@ -91,14 +106,14 @@ void SnakeGame::moveSnake() {
     // Check wall collision
     if (!isValidPosition(newHead)) {
         gameOver = true;
-        endTime = chrono::steady_clock::now();
+        endTime = time(NULL);
         return;
     }
     
     // Check self collision
     if (checkCollision(newHead)) {
         gameOver = true;
-        endTime = chrono::steady_clock::now();
+        endTime = time(NULL);
         return;
     }
     
@@ -187,6 +202,7 @@ char SnakeGame::getInput() {
 void SnakeGame::step() {
     if (!gameOver) {
         moveSnake();
+        totalSteps++;
     }
 }
 
@@ -214,12 +230,12 @@ void SnakeGame::runInteractive() {
                 break;
             case 'q': case 'Q':
                 gameOver = true;
-                endTime = chrono::steady_clock::now();
+                endTime = time(NULL);
                 break;
         }
         
         step();
-        this_thread::sleep_for(chrono::milliseconds(200));
+        sleepMs(200);
     }
     
     drawGame();
@@ -232,9 +248,6 @@ void SnakeGame::runInteractive() {
 
 void SnakeGame::runSimulation(int steps) {
     cout << "Esecuzione simulazione Snake (" << steps << " passi)..." << endl;
-    
-    // Deterministic simulation with seeded random
-    srand(42); // Fixed seed for reproducible results
     
     // Simple AI: try to move towards food
     for (int i = 0; i < steps && !gameOver; i++) {
@@ -270,17 +283,28 @@ void SnakeGame::runSimulation(int steps) {
         }
     }
     
-    endTime = chrono::steady_clock::now();
+    endTime = time(NULL);
     
     cout << "Simulazione completata!" << endl;
     cout << "Punteggio finale: " << score << endl;
     cout << "Lunghezza finale: " << snake.size() << endl;
-    cout << "Passi eseguiti: " << (gameOver ? "Gioco terminato prima" : to_string(steps)) << endl;
+    if (gameOver) {
+        cout << "Passi eseguiti: Gioco terminato prima" << endl;
+    } else {
+        stringstream ss;
+        ss << steps;
+        cout << "Passi eseguiti: " << ss.str() << endl;
+    }
 }
 
 double SnakeGame::getGameDuration() const {
-    auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
-    return duration.count() / 1000.0;
+    if (totalSteps > 0) {
+        // For simulation: assume 200ms per step
+        return totalSteps * 0.2;
+    } else {
+        // For interactive: use actual time
+        return difftime(endTime, startTime);
+    }
 }
 
 // SnakeGameTest Implementation
@@ -295,19 +319,20 @@ EStatusCode SnakeGameTest::Run(const TestConfiguration& inTestConfiguration) {
     cout << "Questo test esegue un gioco Snake e genera un report PDF." << endl;
     cout << endl;
     
-    SnakeGame game;
-    
     // Check if interactive mode is requested
     const char* interactive = getenv("SNAKE_INTERACTIVE");
     if (interactive && strcmp(interactive, "1") == 0) {
         cout << "Modalità interattiva abilitata (SNAKE_INTERACTIVE=1)" << endl;
+        SnakeGame game(true); // Seed with current time
         game.runInteractive();
+        return generateGameReportPDF(inTestConfiguration, game);
     } else {
         cout << "Modalità simulazione (usa SNAKE_INTERACTIVE=1 per modalità interattiva)" << endl;
+        SnakeGame game(false); // Don't seed randomly
+        game.setSeed(42); // Fixed seed for reproducible results
         game.runSimulation(150); // Run simulation for 150 steps
+        return generateGameReportPDF(inTestConfiguration, game);
     }
-    
-    return generateGameReportPDF(inTestConfiguration, game);
 }
 
 EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTestConfiguration, 
@@ -332,82 +357,103 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
             break;
         }
         
-        // Try to get a font - use built-in font if available
-        PDFUsedFont* titleFont = nullptr;
-        PDFUsedFont* textFont = nullptr;
+        // Try to get a font - use actual font files if available
+        PDFUsedFont* titleFont = NULL;
+        PDFUsedFont* textFont = NULL;
         
-        // Try to use built-in fonts first, fallback to basic text if not available
-        try {
-            titleFont = pdfWriter.GetFontForFile("Helvetica-Bold");
-            textFont = pdfWriter.GetFontForFile("Helvetica");
-        } catch (...) {
-            // If fonts fail, we'll use basic text rendering
-        }
+        // Try to load arial.ttf from TestMaterials (like other tests do)
+        textFont = pdfWriter.GetFontForFile(
+            RelativeURLToLocalPath(inTestConfiguration.mSampleFileBase, "TestMaterials/fonts/arial.ttf"));
+        titleFont = textFont; // Use same font for title, just different size
         
         // Title
         contentContext->BT();
         contentContext->k(0, 0, 0, 100); // Black
         if (titleFont) {
             contentContext->Tf(titleFont, 24);
+            contentContext->Td(50, 750);
+            EStatusCode titleStatus = contentContext->Tj("SNAKE GAME - REPORT DI GIOCO");
+            if (titleStatus != eSuccess) {
+                cout << "Warning: Could not render title text" << endl;
+            }
+        } else {
+            // Fallback: draw title as a rectangle if no font available
+            contentContext->q();
+            contentContext->k(0, 0, 0, 100);
+            contentContext->re(50, 740, 400, 20);
+            contentContext->f();
+            contentContext->Q();
         }
-        contentContext->Td(50, 750);
-        contentContext->Tj("SNAKE GAME - REPORT DI GIOCO");
         contentContext->ET();
         
         // Game statistics
-        contentContext->BT();
         if (textFont) {
+            contentContext->BT();
             contentContext->Tf(textFont, 14);
+            contentContext->Td(50, 700);
+            
+            stringstream stats;
+            stats << "Punteggio Finale: " << game.getScore();
+            EStatusCode statStatus = contentContext->Tj(stats.str());
+            if (statStatus != eSuccess) {
+                cout << "Warning: Could not render statistics text" << endl;
+            }
+            contentContext->ET();
+            
+            contentContext->BT();
+            contentContext->Td(50, 680);
+            stats.str("");
+            stats << "Lunghezza Finale del Serpente: " << game.getSnakeLength();
+            contentContext->Tj(stats.str());
+            contentContext->ET();
+            
+            contentContext->BT();
+            contentContext->Td(50, 660);
+            stats.str("");
+            stats << "Durata del Gioco: " << fixed << setprecision(1) << game.getGameDuration() << " secondi";
+            contentContext->Tj(stats.str());
+            contentContext->ET();
+        } else {
+            // Fallback: draw statistics as colored bars if no font
+            contentContext->q();
+            contentContext->k(0, 100, 0, 0); // Green for score
+            int scoreWidth = std::min(300, game.getScore() * 3);
+            contentContext->re(50, 700, scoreWidth, 10);
+            contentContext->f();
+            
+            contentContext->k(0, 0, 100, 0); // Blue for length
+            int lengthWidth = std::min(300, game.getSnakeLength() * 10);
+            contentContext->re(50, 680, lengthWidth, 10);
+            contentContext->f();
+            contentContext->Q();
         }
-        contentContext->Td(50, 700);
-        
-        stringstream stats;
-        stats << "Punteggio Finale: " << game.getScore();
-        contentContext->Tj(stats.str());
-        contentContext->ET();
-        
-        contentContext->BT();
-        contentContext->Td(50, 680);
-        stats.str("");
-        stats << "Lunghezza Finale del Serpente: " << game.getSnakeLength();
-        contentContext->Tj(stats.str());
-        contentContext->ET();
-        
-        contentContext->BT();
-        contentContext->Td(50, 660);
-        stats.str("");
-        stats << "Durata del Gioco: " << fixed << setprecision(1) << game.getGameDuration() << " secondi";
-        contentContext->Tj(stats.str());
-        contentContext->ET();
         
         // Performance evaluation
-        contentContext->BT();
         if (textFont) {
+            contentContext->BT();
             contentContext->Tf(textFont, 16);
-        }
-        contentContext->Td(50, 620);
-        contentContext->Tj("VALUTAZIONE PERFORMANCE:");
-        contentContext->ET();
-        
-        contentContext->BT();
-        if (textFont) {
+            contentContext->Td(50, 620);
+            contentContext->Tj("VALUTAZIONE PERFORMANCE:");
+            contentContext->ET();
+            
+            contentContext->BT();
             contentContext->Tf(textFont, 12);
+            contentContext->Td(50, 590);
+            
+            string performance;
+            if (game.getScore() >= 100) {
+                performance = "ECCELLENTE! Sei un maestro del Snake!";
+            } else if (game.getScore() >= 50) {
+                performance = "BUONO! Continua cosi!";
+            } else if (game.getScore() >= 20) {
+                performance = "DISCRETO. Puoi migliorare!";
+            } else {
+                performance = "PRINCIPIANTE. Continua a praticare!";
+            }
+            
+            contentContext->Tj(performance);
+            contentContext->ET();
         }
-        contentContext->Td(50, 590);
-        
-        string performance;
-        if (game.getScore() >= 100) {
-            performance = "ECCELLENTE! Sei un maestro del Snake!";
-        } else if (game.getScore() >= 50) {
-            performance = "BUONO! Continua cosi!";
-        } else if (game.getScore() >= 20) {
-            performance = "DISCRETO. Puoi migliorare!";
-        } else {
-            performance = "PRINCIPIANTE. Continua a praticare!";
-        }
-        
-        contentContext->Tj(performance);
-        contentContext->ET();
         
         // Draw a simple snake representation
         contentContext->q();
@@ -427,14 +473,14 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         contentContext->Q();
         
         // Footer
-        contentContext->BT();
-        contentContext->k(0, 0, 0, 50); // Gray
         if (textFont) {
+            contentContext->BT();
+            contentContext->k(0, 0, 0, 50); // Gray
             contentContext->Tf(textFont, 10);
+            contentContext->Td(50, 50);
+            contentContext->Tj("Generato da PDF-Writer Snake Game Test");
+            contentContext->ET();
         }
-        contentContext->Td(50, 50);
-        contentContext->Tj("Generato da PDF-Writer Snake Game Test");
-        contentContext->ET();
         
         status = pdfWriter.EndPageContentContext(contentContext);
         if (status != eSuccess) {

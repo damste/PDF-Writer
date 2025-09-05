@@ -22,8 +22,8 @@
 #include "ITestUnit.h"
 #include <vector>
 #include <utility>
-#include <chrono>
 #include <algorithm>
+#include <ctime>
 
 struct Position {
     int x, y;
@@ -47,8 +47,9 @@ private:
     Direction currentDirection;
     int score;
     bool gameOver;
-    std::chrono::steady_clock::time_point startTime;
-    std::chrono::steady_clock::time_point endTime;
+    time_t startTime;
+    time_t endTime;
+    int totalSteps; // For simulation duration calculation
     
     void generateFood();
     bool isValidPosition(const Position& pos);
@@ -58,7 +59,7 @@ private:
     char getInput();
     
 public:
-    SnakeGame();
+    SnakeGame(bool seedRandom = true);
     void runInteractive();
     void runSimulation(int steps = 100);
     int getScore() const { return score; }
@@ -66,6 +67,7 @@ public:
     int getSnakeLength() const { return static_cast<int>(snake.size()); }
     bool isGameOver() const { return gameOver; }
     void step(); // Single game step for simulation
+    void setSeed(unsigned int seed); // For deterministic simulation
 };
 
 class SnakeGameTest : public ITestUnit
