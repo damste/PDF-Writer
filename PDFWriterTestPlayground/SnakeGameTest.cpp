@@ -391,8 +391,8 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         contentContext->BT();
         contentContext->k(0, 0, 0, 100); // Black
         if (titleFont) {
-            contentContext->Tf(titleFont, 24);
-            contentContext->Td(50, 750);
+            contentContext->Tf(titleFont, 1);
+            contentContext->Tm(24, 0, 0, 24, 50, 750);
             EStatusCode titleStatus = contentContext->Tj("SNAKE GAME - REPORT DI GIOCO");
             if (titleStatus != eSuccess) {
                 cout << "Warning: Could not render title text" << endl;
@@ -410,29 +410,32 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         // Game statistics
         if (textFont) {
             contentContext->BT();
-            contentContext->Tf(textFont, 14);
-            contentContext->Td(50, 700);
+            contentContext->Tf(textFont, 1);
+            contentContext->Tm(14, 0, 0, 14, 50, 700);
             
             stringstream stats;
             stats << "Punteggio Finale: " << game.getScore();
-            EStatusCode statStatus = contentContext->Tj(stats.str());
+            string statText = stats.str();
+            EStatusCode statStatus = contentContext->Tj(statText.c_str());
             if (statStatus != eSuccess) {
                 cout << "Warning: Could not render statistics text" << endl;
             }
             contentContext->ET();
             
             contentContext->BT();
-            contentContext->Td(50, 680);
+            contentContext->Tm(14, 0, 0, 14, 50, 680);
             stats.str("");
             stats << "Lunghezza Finale del Serpente: " << game.getSnakeLength();
-            contentContext->Tj(stats.str());
+            statText = stats.str();
+            contentContext->Tj(statText.c_str());
             contentContext->ET();
             
             contentContext->BT();
-            contentContext->Td(50, 660);
+            contentContext->Tm(14, 0, 0, 14, 50, 660);
             stats.str("");
             stats << "Durata del Gioco: " << fixed << setprecision(1) << game.getGameDuration() << " secondi";
-            contentContext->Tj(stats.str());
+            statText = stats.str();
+            contentContext->Tj(statText.c_str());
             contentContext->ET();
         } else {
             // Fallback: draw statistics as colored bars if no font
@@ -452,14 +455,13 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         // Performance evaluation
         if (textFont) {
             contentContext->BT();
-            contentContext->Tf(textFont, 16);
-            contentContext->Td(50, 620);
+            contentContext->Tf(textFont, 1);
+            contentContext->Tm(16, 0, 0, 16, 50, 620);
             contentContext->Tj("VALUTAZIONE PERFORMANCE:");
             contentContext->ET();
             
             contentContext->BT();
-            contentContext->Tf(textFont, 12);
-            contentContext->Td(50, 590);
+            contentContext->Tm(12, 0, 0, 12, 50, 590);
             
             string performance;
             if (game.getScore() >= 100) {
@@ -472,7 +474,7 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
                 performance = "PRINCIPIANTE. Continua a praticare!";
             }
             
-            contentContext->Tj(performance);
+            contentContext->Tj(performance.c_str());
             contentContext->ET();
         }
         
@@ -496,8 +498,8 @@ EStatusCode SnakeGameTest::generateGameReportPDF(const TestConfiguration& inTest
         if (textFont) {
             contentContext->BT();
             contentContext->k(0, 0, 0, 50); // Gray
-            contentContext->Tf(textFont, 10);
-            contentContext->Td(50, 50);
+            contentContext->Tf(textFont, 1);
+            contentContext->Tm(10, 0, 0, 10, 50, 50);
             contentContext->Tj("Generato da PDF-Writer Snake Game Test");
             contentContext->ET();
         }
