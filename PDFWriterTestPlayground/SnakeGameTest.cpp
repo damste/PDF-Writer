@@ -48,6 +48,10 @@
 using namespace std;
 using namespace PDFHummus;
 
+// Static const member definitions for C++03 ODR compliance
+const int SnakeGame::GRID_WIDTH;
+const int SnakeGame::GRID_HEIGHT;
+
 // Cross-platform sleep function
 static void sleepMs(int milliseconds) {
 #ifdef _WIN32
